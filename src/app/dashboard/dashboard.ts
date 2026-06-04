@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService, AnomalyScore, AircraftEntity } from '../api';
 
@@ -14,7 +14,7 @@ export class Dashboard implements OnInit, OnDestroy {
   loading = true;
   private pollInterval: any;
 
-  constructor(private api: ApiService) {}
+  constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     this.api.login('abel', 'sentinel123').subscribe(res => {
@@ -30,10 +30,12 @@ export class Dashboard implements OnInit, OnDestroy {
         new Date(b.flaggedAt).getTime() - new Date(a.flaggedAt).getTime()
       );
       this.loading = false;
+      this.cdr.detectChanges();
     });
 
     this.api.getEntities().subscribe(data => {
       this.entities = data;
+      this.cdr.detectChanges();
     });
   }
 
