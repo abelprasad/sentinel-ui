@@ -1,0 +1,49 @@
+<div class="dashboard">
+  <header class="dashboard-header">
+    <span class="logo">SENTINEL</span>
+    <span class="status">● LIVE</span>
+  </header>
+
+  <main class="dashboard-body">
+    <section class="panel anomaly-panel">
+      <h2 class="panel-title">ANOMALY FEED</h2>
+
+      <div *ngIf="loading" class="empty">Connecting...</div>
+
+      <div *ngIf="!loading && anomalies.length === 0" class="empty">
+        No anomalies detected.
+      </div>
+
+      <div *ngFor="let a of anomalies" class="anomaly-card" [class]="severityClass(a.score)">
+        <div class="anomaly-header">
+          <span class="callsign">{{ a.entity.callsign }}</span>
+          <span class="score" [class]="'score-' + severityClass(a.score)">
+            {{ (a.score * 100).toFixed(0) }}%
+          </span>
+        </div>
+        <div class="explanation">{{ a.explanation }}</div>
+        <div class="meta">
+          {{ a.event.altitude | number:'1.0-0' }}ft &nbsp;·&nbsp;
+          {{ a.event.speed | number:'1.0-0' }}kts &nbsp;·&nbsp;
+          {{ a.event.heading | number:'1.0-0' }}°
+        </div>
+        <div class="timestamp">{{ a.flaggedAt | date:'HH:mm:ss' }}</div>
+      </div>
+    </section>
+
+    <section class="panel entity-panel">
+      <h2 class="panel-title">TRACKED ENTITIES ({{ entities.length }})</h2>
+
+      <div *ngIf="loading" class="empty">Connecting...</div>
+
+      <div *ngIf="!loading && entities.length === 0" class="empty">
+        No entities.
+      </div>
+
+      <div *ngFor="let e of entities" class="entity-row">
+        <span class="entity-callsign">{{ e.callsign }}</span>
+        <span class="entity-hex">{{ e.icaoHex }}</span>
+      </div>
+    </section>
+  </main>
+</div>
