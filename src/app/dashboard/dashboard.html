@@ -1,6 +1,6 @@
 <div class="dashboard">
   <header class="topbar">
-    <span class="wordmark">Sentinel</span>
+    <span class="wordmark" style="color: var(--accent)">Sentinel</span>
     <div class="topbar-right">
       <div class="stat">Entities <span>{{ entities.length }}</span></div>
       <div class="stat">Anomalies <span>{{ anomalies.length }}</span></div>
@@ -9,7 +9,9 @@
   </header>
 
   <div class="main">
-    <section class="feed">
+    <div #mapContainer id="map"></div>
+
+    <aside class="panel">
       <div class="section-header">
         Anomaly feed
         <span class="count">{{ anomalies.length }}</span>
@@ -30,21 +32,6 @@
           <span>{{ a.event.heading | number:'1.0-0' }}°</span>
           <span>{{ a.flaggedAt | date:'HH:mm:ss' }}</span>
         </div>
-      </div>
-    </section>
-
-    <aside class="sidebar">
-      <div class="section-header">
-        Tracked entities
-        <span class="count">{{ entities.length }}</span>
-      </div>
-
-      <div *ngIf="loading" class="empty-state">Connecting...</div>
-      <div *ngIf="!loading && entities.length === 0" class="empty-state">No entities</div>
-
-      <div *ngFor="let e of entities" class="entity-row">
-        <span class="entity-callsign">{{ e.callsign }}</span>
-        <span class="entity-hex">{{ e.icaoHex }}</span>
       </div>
     </aside>
   </div>
