@@ -2,9 +2,9 @@
   <header class="topbar">
     <span class="wordmark">Sentinel</span>
     <div class="topbar-right">
-      <div class="stat">ENTITIES <span>{{ entities.length }}</span></div>
-      <div class="stat">ANOMALIES <span>{{ anomalies.length }}</span></div>
-      <div class="live-badge">LIVE</div>
+      <div class="stat">Entities <span>{{ entities.length }}</span></div>
+      <div class="stat">Anomalies <span>{{ anomalies.length }}</span></div>
+      <div class="live-indicator"></div>
     </div>
   </header>
 
@@ -21,9 +21,7 @@
       <div *ngFor="let a of anomalies" class="anomaly-card" [class]="severityClass(a.score)">
         <div class="card-top">
           <span class="callsign">{{ a.entity.callsign }}</span>
-          <span class="score-badge" [class]="severityClass(a.score)">
-            {{ (a.score * 100).toFixed(0) }}%
-          </span>
+          <span class="score-inline" [class]="severityClass(a.score)">{{ (a.score * 100).toFixed(0) }}%</span>
         </div>
         <div class="explanation">{{ a.explanation }}</div>
         <div class="card-meta">
