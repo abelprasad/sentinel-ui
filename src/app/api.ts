@@ -19,6 +19,18 @@ export interface AircraftEntity {
   metadata: string;
 }
 
+export interface PositionDTO {
+  entityId: number;
+  callsign: string;
+  icaoHex: string;
+  lat: number;
+  lon: number;
+  altitude: number;
+  speed: number;
+  heading: number;
+  anomalous: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private base = 'http://localhost:8080';
@@ -44,5 +56,9 @@ export class ApiService {
 
   getEntities(): Observable<AircraftEntity[]> {
     return this.http.get<AircraftEntity[]>(`${this.base}/entities`, { headers: this.headers() });
+  }
+
+  getPositions(): Observable<PositionDTO[]> {
+    return this.http.get<PositionDTO[]>(`${this.base}/positions`, { headers: this.headers() });
   }
 }
