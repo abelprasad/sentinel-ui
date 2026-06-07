@@ -30,3 +30,51 @@ html, body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
+/* Leaflet overrides */
+.leaflet-container {
+  background: #080b0f;
+  font-family: var(--font-sans);
+}
+
+.aircraft-marker {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(205, 217, 229, 0.7);
+  border: 1px solid rgba(205, 217, 229, 0.4);
+
+  &.anomalous {
+    background: rgba(224, 82, 82, 0.9);
+    border-color: rgba(224, 82, 82, 0.5);
+    box-shadow: 0 0 6px rgba(224, 82, 82, 0.4);
+  }
+}
+
+.marker-tooltip {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  box-shadow: none;
+
+  &::before { display: none; }
+}
+
+.leaflet-control-zoom {
+  border: 1px solid var(--border-strong) !important;
+  border-radius: 2px !important;
+
+  a {
+    background: var(--surface) !important;
+    color: var(--text-muted) !important;
+    border-bottom: 1px solid var(--border) !important;
+
+    &:hover {
+      background: var(--surface-2) !important;
+      color: var(--text) !important;
+    }
+  }
+}
