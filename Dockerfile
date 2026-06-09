@@ -4,6 +4,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
+RUN sed -i 's|http://localhost:8080|http://100.98.50.85:8888|g' src/environments/environment.ts
 RUN npm run build
 
 # Stage 2: Serve
