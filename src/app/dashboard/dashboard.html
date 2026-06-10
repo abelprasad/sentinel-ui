@@ -10,9 +10,63 @@
     <div class="topbar-right">
       <div class="stat">Entries <span>{{ entities.length }}</span></div>
       <div class="stat">Anomalies <span>{{ anomalies.length }}</span></div>
+      <button class="sim-toggle" (click)="toggleSimPanel()" [class.active]="simPanelOpen">[ SIM ]</button>
       <div class="live-indicator"></div>
     </div>
   </header>
+
+  <!-- Simulation panel -->
+  <div class="sim-panel" *ngIf="simPanelOpen">
+    <div class="sim-panel-header">
+      <span class="sim-title">Simulation Mode</span>
+      <button class="sim-close" (click)="toggleSimPanel()">✕</button>
+    </div>
+
+    <div class="sim-section">
+      <div class="sim-section-label">Quick Fire</div>
+      <p class="sim-desc">Picks a random active entity, injects a guaranteed score-1.0 anomaly.</p>
+      <button class="sim-btn-primary" (click)="quickFire()" [disabled]="simLoading">
+        {{ simLoading ? 'Injecting...' : 'Inject Anomaly' }}
+      </button>
+    </div>
+
+    <div class="sim-divider"></div>
+
+    <div class="sim-section">
+      <div class="sim-section-label">Custom Injection</div>
+
+      <div class="sim-field">
+        <label>Entity</label>
+        <select [(ngModel)]="simEntityId">
+          <option [value]="null" disabled>Select aircraft</option>
+          <option *ngFor="let e of entities" [value]="e.id">
+            {{ e.callsign || e.icaoHex }}
+          </option>
+        </select>
+      </div>
+
+      <div class="sim-field">
+        <label>Altitude &nbsp;<span class="sim-val">{{ simAltitude | number:'1.0-0' }} ft</span></label>
+        <input type="range" min="0" max="50000" step="500" [(ngModel)]="simAltitude" />
+      </div>
+
+      <div class="sim-field">
+        <label>Speed &nbsp;<span class="sim-val">{{ simSpeed | number:'1.0-0' }} kts</span></label>
+        <input type="range" min="0" max="600" step="10" [(ngModel)]="simSpeed" />
+      </div>
+
+      <div class="sim-field">
+        <label>Heading &nbsp;<span class="sim-val">{{ simHeading | number:'1.0-0' }}°</span></label>
+        <input type="range" min="0" max="360" step="5" [(ngModel)]="simHeading" />
+      </div>
+
+      <button class="sim-btn-secondary" (click)="injectCustom()" [disabled]="simLoading || !simEntityId">
+        {{ simLoading ? 'Injecting...' : 'Inject Custom' }}
+      </button>
+    </div>
+
+    <div class="sim-result" *ngIf="simResult">{{ simResult }}</div>
+  </div>
 
   <div class="main">
 
