@@ -62,4 +62,8 @@ export class ApiService {
   getPositions(): Observable<PositionDTO[]> {
     return this.http.get<PositionDTO[]>(`${this.base}/positions`, { headers: this.headers() });
   }
+
+  getEntityAnomalies(entityId: number): Observable<AnomalyScore[]> {
+    return this.http.get<AnomalyScore[]>(`${this.base}/entities/${entityId}/anomalies`, { headers: this.headers() });
+  }
 }
