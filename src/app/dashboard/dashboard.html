@@ -1,6 +1,12 @@
 <div class="dashboard">
   <header class="topbar">
-    <span class="wordmark" style="color: var(--accent)">Sentinel</span>
+    <span class="wordmark">SENTINEL</span>
+    <div class="topbar-center">
+      <div class="countdown-wrap">
+        <div class="countdown-bar" [style.width.%]="(countdown / 30) * 100"></div>
+      </div>
+      <span class="countdown-label">{{ countdown }}s</span>
+    </div>
     <div class="topbar-right">
       <div class="stat">Entities <span>{{ entities.length }}</span></div>
       <div class="stat">Anomalies <span>{{ anomalies.length }}</span></div>
@@ -9,21 +15,21 @@
   </header>
 
   <div class="main">
-    <div #mapContainer id="map"></div>
+    <div id="map"></div>
 
     <aside class="panel">
       <div class="section-header">
-        Anomaly feed
-        <span class="count">{{ anomalies.length }}</span>
+        <span>Anomaly feed</span>
+        <span class="count">{{ visibleAnomalyCount }} / latest 100</span>
       </div>
 
       <div *ngIf="loading" class="empty-state">Connecting...</div>
       <div *ngIf="!loading && anomalies.length === 0" class="empty-state">No anomalies detected</div>
 
-      <div *ngFor="let a of anomalies" class="anomaly-card" [class]="severityClass(a.score)">
+      <div *ngFor="let a of anomalies" class="anomaly-card" [ngClass]="severityClass(a.score)">
         <div class="card-top">
           <span class="callsign">{{ a.entity.callsign }}</span>
-          <span class="score-inline" [class]="severityClass(a.score)">{{ (a.score * 100).toFixed(0) }}%</span>
+          <span class="score-inline" [ngClass]="severityClass(a.score)">{{ (a.score * 100).toFixed(0) }}%</span>
         </div>
         <div class="explanation">{{ a.explanation }}</div>
         <div class="card-meta">

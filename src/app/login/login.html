@@ -1,0 +1,38 @@
+<div class="login-wrap">
+  <div class="login-box">
+    <div class="login-header">
+      <span class="wordmark">SENTINEL</span>
+      <p class="tagline">Pattern of Life Analyzer</p>
+    </div>
+
+    <div class="login-form">
+      <div class="field">
+        <label>Username</label>
+        <input
+          type="text"
+          [(ngModel)]="username"
+          placeholder="username"
+          autocomplete="username"
+          (keyup.enter)="submit()"
+        />
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <input
+          type="password"
+          [(ngModel)]="password"
+          placeholder="••••••••"
+          autocomplete="current-password"
+          (keyup.enter)="submit()"
+        />
+      </div>
+
+      <div class="error" *ngIf="error">{{ error }}</div>
+
+      <button class="btn-login" (click)="submit()" [disabled]="loading">
+        {{ loading ? 'Authenticating...' : 'Access System' }}
+      </button>
+    </div>
+  </div>
+</div>
