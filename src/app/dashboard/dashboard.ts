@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { ApiService, AnomalyScore, AircraftEntity, PositionDTO } from '../api';
 import * as L from 'leaflet';
 
@@ -22,22 +23,26 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
   private positionInterval: any;
   private countdownInterval: any;
 
-  constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
+  constructor(private api: ApiService, private cdr: ChangeDetectorRef, private router: Router) {}
 
   ngOnInit() {
-    this.api.login('abel', 'sentinel123').subscribe(res => {
-      this.api.setToken(res.token);
-      this.fetchData();
-      this.pollInterval = setInterval(() => this.fetchData(), 10000);
-      this.positionInterval = setInterval(() => {
-        this.fetchPositions();
-        this.countdown = 30;
-      }, 30000);
-      this.countdownInterval = setInterval(() => {
-        this.countdown = Math.max(0, this.countdown - 1);
-        this.cdr.detectChanges();
-      }, 1000);
-    });
+    const token = localStorage.getItem('sentinel_token');
+    if (!token) {
+      this.router.navigate(['/login']);
+      return;
+    }
+
+    this.api.setToken(token);
+    this.fetchData();
+    this.pollInterval = setInterval(() => this.fetchData(), 10000);
+    this.positionInterval = setInterval(() => {
+      this.fetchPositions();
+      this.countdown = 30;
+    }, 30000);
+    this.countdownInterval = setInterval(() => {
+      this.countdown = Math.max(0, this.countdown - 1);
+      this.cdr.detectChanges();
+    }, 1000);
   }
 
   ngAfterViewInit() {
@@ -65,13 +70,21 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
   }
 
   fetchData() {
-    this.api.getAnomalies().subscribe(data => {
-      const sorted = data.sort((a, b) =>
-        new Date(b.flaggedAt).getTime() - new Date(a.flaggedAt).getTime()
-      );
-      this.anomalies = sorted.slice(0, 100);
-      this.loading = false;
-      this.cdr.detectChanges();
+    this.api.getAnomalies().subscribe({
+      next: data => {
+        const sorted = data.sort((a, b) =>
+          new Date(b.flaggedAt).getTime() - new Date(a.flaggedAt).getTime()
+        );
+        this.anomalies = sorted.slice(0, 100);
+        this.loading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        if (err.status === 401 || err.status === 403) {
+          localStorage.removeItem('sentinel_token');
+          this.router.navigate(['/login']);
+        }
+      }
     });
 
     this.api.getEntities().subscribe(data => {
@@ -118,7 +131,6 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
 
       if (existing) {
         existing.marker.setLatLng([p.lat, p.lon]);
-        // only update icon if anomaly status changed
         if (existing.anomalous !== p.anomalous) {
           existing.marker.setIcon(this.makePlaneIcon(p.heading ?? 0, p.anomalous));
           existing.anomalous = p.anomalous;
@@ -162,5 +174,10 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
 
   get visibleAnomalyCount(): number {
     return this.anomalies.length;
+  }
+
+  logout() {
+    localStorage.removeItem('sentinel_token');
+    this.router.navigate(['/login']);
   }
 }
