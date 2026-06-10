@@ -14,11 +14,13 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
   entities: AircraftEntity[] = [];
   positions: PositionDTO[] = [];
   loading = true;
+  countdown = 30;
 
   private map!: L.Map;
-  private markers: Map<number, L.Marker> = new Map();
+  private markers: Map<number, { marker: L.Marker; anomalous: boolean }> = new Map();
   private pollInterval: any;
   private positionInterval: any;
+  private countdownInterval: any;
 
   constructor(private api: ApiService, private cdr: ChangeDetectorRef) {}
 
@@ -27,7 +29,14 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
       this.api.setToken(res.token);
       this.fetchData();
       this.pollInterval = setInterval(() => this.fetchData(), 10000);
-      this.positionInterval = setInterval(() => this.fetchPositions(), 30000);
+      this.positionInterval = setInterval(() => {
+        this.fetchPositions();
+        this.countdown = 30;
+      }, 30000);
+      this.countdownInterval = setInterval(() => {
+        this.countdown = Math.max(0, this.countdown - 1);
+        this.cdr.detectChanges();
+      }, 1000);
     });
   }
 
@@ -57,9 +66,10 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
 
   fetchData() {
     this.api.getAnomalies().subscribe(data => {
-      this.anomalies = data.sort((a, b) =>
+      const sorted = data.sort((a, b) =>
         new Date(b.flaggedAt).getTime() - new Date(a.flaggedAt).getTime()
       );
+      this.anomalies = sorted.slice(0, 100);
       this.loading = false;
       this.cdr.detectChanges();
     });
@@ -77,6 +87,24 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
+  private makePlaneIcon(heading: number, anomalous: boolean): L.DivIcon {
+    const color = anomalous ? '#e05252' : '#cdd9e5';
+    const glow = anomalous ? `filter: drop-shadow(0 0 4px rgba(224,82,82,0.8));` : '';
+    const svg = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"
+           style="transform: rotate(${heading}deg); ${glow}">
+        <polygon points="10,1 13,14 10,12 7,14" fill="${color}" opacity="0.95"/>
+        <polygon points="5,8 15,8 13,11 7,11" fill="${color}" opacity="0.7"/>
+        <polygon points="8,12 12,12 11,16 9,16" fill="${color}" opacity="0.6"/>
+      </svg>`;
+    return L.divIcon({
+      className: '',
+      html: svg,
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+  }
+
   updateMarkers(positions: PositionDTO[]) {
     if (!this.map) return;
 
@@ -86,28 +114,34 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
       if (p.lat == null || p.lon == null) return;
       seen.add(p.entityId);
 
-      const icon = L.divIcon({
-        className: '',
-        html: `<div class="aircraft-marker ${p.anomalous ? 'anomalous' : ''}"></div>`,
-        iconSize: [10, 10],
-        iconAnchor: [5, 5]
-      });
+      const existing = this.markers.get(p.entityId);
 
-      if (this.markers.has(p.entityId)) {
-        const marker = this.markers.get(p.entityId)!;
-        marker.setLatLng([p.lat, p.lon]);
-        marker.setIcon(icon);
+      if (existing) {
+        existing.marker.setLatLng([p.lat, p.lon]);
+        // only update icon if anomaly status changed
+        if (existing.anomalous !== p.anomalous) {
+          existing.marker.setIcon(this.makePlaneIcon(p.heading ?? 0, p.anomalous));
+          existing.anomalous = p.anomalous;
+        }
       } else {
-        const marker = L.marker([p.lat, p.lon], { icon })
-          .bindTooltip(p.callsign, { permanent: false, className: 'marker-tooltip' })
+        const marker = L.marker([p.lat, p.lon], {
+          icon: this.makePlaneIcon(p.heading ?? 0, p.anomalous)
+        })
+          .bindTooltip(`
+            <div class="marker-tooltip-inner">
+              <div class="tt-callsign">${p.callsign || p.icaoHex}</div>
+              <div class="tt-row">${p.altitude?.toLocaleString() ?? '--'} ft &nbsp; ${p.speed?.toFixed(0) ?? '--'} kts &nbsp; ${p.heading?.toFixed(0) ?? '--'}°</div>
+              ${p.anomalous ? '<div class="tt-anomalous">ANOMALOUS</div>' : ''}
+            </div>
+          `, { permanent: false, className: 'marker-tooltip', direction: 'top', offset: [0, -10] })
           .addTo(this.map);
-        this.markers.set(p.entityId, marker);
+        this.markers.set(p.entityId, { marker, anomalous: p.anomalous });
       }
     });
 
-    this.markers.forEach((marker, id) => {
+    this.markers.forEach((entry, id) => {
       if (!seen.has(id)) {
-        marker.remove();
+        entry.marker.remove();
         this.markers.delete(id);
       }
     });
@@ -116,6 +150,7 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
   ngOnDestroy() {
     clearInterval(this.pollInterval);
     clearInterval(this.positionInterval);
+    clearInterval(this.countdownInterval);
     if (this.map) this.map.remove();
   }
 
@@ -123,5 +158,9 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
     if (score >= 0.8) return 'high';
     if (score >= 0.5) return 'medium';
     return 'low';
+  }
+
+  get visibleAnomalyCount(): number {
+    return this.anomalies.length;
   }
 }
