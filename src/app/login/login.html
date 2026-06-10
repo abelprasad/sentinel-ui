@@ -1,13 +1,20 @@
 <div class="login-wrap">
+
+  <!-- Animated background paths -->
+  <svg class="bg-paths" viewBox="0 0 696 316" fill="none" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <g class="paths-group" id="paths-pos"></g>
+    <g class="paths-group" id="paths-neg"></g>
+  </svg>
+
   <div class="login-box">
     <div class="login-header">
-      <span class="wordmark">SENTINEL</span>
+      <span class="wordmark">[ SENTINEL ]</span>
       <p class="tagline">Pattern of Life Analyzer</p>
     </div>
 
     <div class="login-form">
       <div class="field">
-        <label>Username</label>
+        <label>Operator ID</label>
         <input
           type="text"
           [(ngModel)]="username"
@@ -18,7 +25,7 @@
       </div>
 
       <div class="field">
-        <label>Password</label>
+        <label>Passphrase</label>
         <input
           type="password"
           [(ngModel)]="password"
@@ -31,8 +38,13 @@
       <div class="error" *ngIf="error">{{ error }}</div>
 
       <button class="btn-login" (click)="submit()" [disabled]="loading">
-        {{ loading ? 'Authenticating...' : 'Access System' }}
+        {{ loading ? 'Authenticating...' : 'Authenticate' }}
       </button>
     </div>
+
+    <div class="login-footer">
+      <span class="status-dot"></span>ALL SYSTEMS NOMINAL &nbsp;·&nbsp; v2.4.1
+    </div>
   </div>
+
 </div>
