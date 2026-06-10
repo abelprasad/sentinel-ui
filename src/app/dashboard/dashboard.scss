@@ -97,6 +97,207 @@
   50% { opacity: 0.3; }
 }
 
+// ─── Sim toggle button ─────────────────────────────────────────────────────
+
+.sim-toggle {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+
+  &:hover {
+    color: var(--accent);
+    border-color: rgba(232,113,42,0.3);
+  }
+
+  &.active {
+    color: var(--accent);
+    border-color: rgba(232,113,42,0.4);
+    background: rgba(232,113,42,0.05);
+  }
+}
+
+// ─── Simulation panel ──────────────────────────────────────────────────────
+
+.sim-panel {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  width: 300px;
+  background: rgba(8, 11, 15, 0.98);
+  border-left: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+}
+
+.sim-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sim-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.sim-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+  transition: color 0.1s;
+
+  &:hover { color: var(--text); }
+}
+
+.sim-section {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sim-section-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.sim-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.sim-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0;
+}
+
+.sim-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  select {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 6px 10px;
+    outline: none;
+    width: 100%;
+    cursor: pointer;
+    transition: border-color 0.15s;
+
+    &:focus { border-color: rgba(232,113,42,0.4); }
+
+    option {
+      background: #0d1117;
+      color: var(--text);
+    }
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+    cursor: pointer;
+    height: 2px;
+  }
+}
+
+.sim-val {
+  color: var(--accent);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.sim-btn-primary {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  padding: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  width: 100%;
+
+  &:hover:not(:disabled) { opacity: 0.85; }
+  &:active:not(:disabled) { transform: scale(0.99); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.sim-btn-secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid rgba(232,113,42,0.3);
+  padding: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  width: 100%;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(232,113,42,0.6);
+    background: rgba(232,113,42,0.04);
+  }
+  &:active:not(:disabled) { transform: scale(0.99); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.sim-result {
+  margin: 0 14px 14px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 0.03em;
+  line-height: 1.5;
+}
+
 // ─── Layout ────────────────────────────────────────────────────────────────
 
 .main {
@@ -222,7 +423,6 @@
 
 // ─── Map Markers ──────────────────────────────────────────────────────────
 
-// Leaflet tooltip override
 :global(.marker-tooltip) {
   background: rgba(8,11,15,0.92) !important;
   border: 1px solid rgba(255,255,255,0.1) !important;
@@ -259,6 +459,7 @@
   margin-top: 3px;
 }
 
+// ─── Detail panel ─────────────────────────────────────────────────────────
 
 .detail-panel {
   width: 280px;
