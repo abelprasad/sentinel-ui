@@ -18,6 +18,7 @@ export interface AircraftEntity {
   icaoHex: string;
   type: string;
   metadata: string;
+  classification: string;
 }
 
 export interface PositionDTO {
@@ -65,5 +66,15 @@ export class ApiService {
 
   getEntityAnomalies(entityId: number): Observable<AnomalyScore[]> {
     return this.http.get<AnomalyScore[]>(`${this.base}/entities/${entityId}/anomalies`, { headers: this.headers() });
+  }
+
+  simulateQuick(): Observable<AnomalyScore> {
+    return this.http.post<AnomalyScore>(`${this.base}/simulate/quick`, {}, { headers: this.headers() });
+  }
+
+  simulateCustom(entityId: number, altitude: number, speed: number, heading: number): Observable<AnomalyScore> {
+    return this.http.post<AnomalyScore>(`${this.base}/simulate/custom`, {
+      entityId, altitude, speed, heading
+    }, { headers: this.headers() });
   }
 }
