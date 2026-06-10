@@ -1,12 +1,13 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ApiService, AnomalyScore, AircraftEntity, PositionDTO } from '../api';
 import * as L from 'leaflet';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
@@ -20,6 +21,15 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
   selectedEntity: PositionDTO | null = null;
   selectedAnomalies: AnomalyScore[] = [];
   detailLoading = false;
+
+  // simulation panel
+  simPanelOpen = false;
+  simLoading = false;
+  simResult: string | null = null;
+  simAltitude = 42000;
+  simSpeed = 550;
+  simHeading = 180;
+  simEntityId: number | null = null;
 
   private map!: L.Map;
   private markers: Map<number, { marker: L.Marker; anomalous: boolean }> = new Map();
@@ -127,6 +137,65 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
     this.selectedEntity = null;
     this.selectedAnomalies = [];
     this.cdr.detectChanges();
+  }
+
+  // simulation panel
+  toggleSimPanel() {
+    this.simPanelOpen = !this.simPanelOpen;
+    this.simResult = null;
+  }
+
+  quickFire() {
+    this.simLoading = true;
+    this.simResult = null;
+    this.cdr.detectChanges();
+
+    this.api.simulateQuick().subscribe({
+      next: (anomaly) => {
+        this.simLoading = false;
+        this.simResult = anomaly
+          ? `Injected: ${anomaly.entity.callsign} — score ${(anomaly.score * 100).toFixed(0)}%`
+          : 'No entity with baseline found';
+        this.fetchData();
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.simLoading = false;
+        this.simResult = 'Injection failed — check logs';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  injectCustom() {
+    if (!this.simEntityId) {
+      this.simResult = 'Select an entity first';
+      return;
+    }
+    this.simLoading = true;
+    this.simResult = null;
+    this.cdr.detectChanges();
+
+    this.api.simulateCustom(
+      this.simEntityId,
+      this.simAltitude,
+      this.simSpeed,
+      this.simHeading
+    ).subscribe({
+      next: (anomaly) => {
+        this.simLoading = false;
+        this.simResult = anomaly
+          ? `Injected: ${anomaly.entity.callsign} — score ${(anomaly.score * 100).toFixed(0)}%`
+          : 'Score below threshold — try more extreme values';
+        this.fetchData();
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.simLoading = false;
+        this.simResult = 'Injection failed — check logs';
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   private makePlaneIcon(heading: number, anomalous: boolean): L.DivIcon {
