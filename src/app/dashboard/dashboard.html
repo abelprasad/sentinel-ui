@@ -8,15 +8,67 @@
       <span class="countdown-label">{{ countdown }}s</span>
     </div>
     <div class="topbar-right">
-      <div class="stat">Entities <span>{{ entities.length }}</span></div>
+      <div class="stat">Entries <span>{{ entities.length }}</span></div>
       <div class="stat">Anomalies <span>{{ anomalies.length }}</span></div>
       <div class="live-indicator"></div>
     </div>
   </header>
 
   <div class="main">
+
+    <!-- Detail panel (left) -->
+    <aside class="detail-panel" *ngIf="selectedEntity">
+      <div class="detail-header">
+        <div class="detail-callsign">{{ selectedEntity.callsign || selectedEntity.icaoHex }}</div>
+        <button class="close-btn" (click)="closeDetail()">✕</button>
+      </div>
+      <div class="detail-meta">
+        <div class="detail-row">
+          <span class="detail-label">ICAO</span>
+          <span class="detail-value">{{ selectedEntity.icaoHex }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">ALT</span>
+          <span class="detail-value">{{ selectedEntity.altitude?.toLocaleString() ?? '--' }} ft</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">SPD</span>
+          <span class="detail-value">{{ selectedEntity.speed?.toFixed(0) ?? '--' }} kts</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">HDG</span>
+          <span class="detail-value">{{ selectedEntity.heading?.toFixed(0) ?? '--' }}°</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">STATUS</span>
+          <span class="detail-value" [class.anomalous-badge]="selectedEntity.anomalous">
+            {{ selectedEntity.anomalous ? 'ANOMALOUS' : 'NORMAL' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="detail-section-label">Recent Anomalies</div>
+
+      <div *ngIf="detailLoading" class="empty-state">Loading...</div>
+      <div *ngIf="!detailLoading && selectedAnomalies.length === 0" class="empty-state">No anomalies on record</div>
+
+      <div *ngFor="let a of selectedAnomalies" class="anomaly-card" [ngClass]="severityClass(a.score)">
+        <div class="card-top">
+          <span class="score-inline" [ngClass]="severityClass(a.score)">{{ (a.score * 100).toFixed(0) }}%</span>
+          <span class="card-time">{{ a.flaggedAt | date:'HH:mm:ss' }}</span>
+        </div>
+        <div class="explanation">{{ a.explanation }}</div>
+        <div class="card-meta">
+          <span>{{ a.event.altitude | number:'1.0-0' }} ft</span>
+          <span>{{ a.event.speed | number:'1.0-0' }} kts</span>
+          <span>{{ a.event.heading | number:'1.0-0' }}°</span>
+        </div>
+      </div>
+    </aside>
+
     <div id="map"></div>
 
+    <!-- Anomaly feed (right) -->
     <aside class="panel">
       <div class="section-header">
         <span>Anomaly feed</span>

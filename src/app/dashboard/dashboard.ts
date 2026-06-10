@@ -17,6 +17,10 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
   loading = true;
   countdown = 30;
 
+  selectedEntity: PositionDTO | null = null;
+  selectedAnomalies: AnomalyScore[] = [];
+  detailLoading = false;
+
   private map!: L.Map;
   private markers: Map<number, { marker: L.Marker; anomalous: boolean }> = new Map();
   private pollInterval: any;
@@ -100,6 +104,31 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
+  selectEntity(position: PositionDTO) {
+    this.selectedEntity = position;
+    this.selectedAnomalies = [];
+    this.detailLoading = true;
+    this.cdr.detectChanges();
+
+    this.api.getEntityAnomalies(position.entityId).subscribe({
+      next: data => {
+        this.selectedAnomalies = data.slice(0, 20);
+        this.detailLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.detailLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  closeDetail() {
+    this.selectedEntity = null;
+    this.selectedAnomalies = [];
+    this.cdr.detectChanges();
+  }
+
   private makePlaneIcon(heading: number, anomalous: boolean): L.DivIcon {
     const color = anomalous ? '#e05252' : '#cdd9e5';
     const glow = anomalous ? `filter: drop-shadow(0 0 4px rgba(224,82,82,0.8));` : '';
@@ -146,6 +175,7 @@ export class Dashboard implements OnInit, OnDestroy, AfterViewInit {
               ${p.anomalous ? '<div class="tt-anomalous">ANOMALOUS</div>' : ''}
             </div>
           `, { permanent: false, className: 'marker-tooltip', direction: 'top', offset: [0, -10] })
+          .on('click', () => this.selectEntity(p))
           .addTo(this.map);
         this.markers.set(p.entityId, { marker, anomalous: p.anomalous });
       }
