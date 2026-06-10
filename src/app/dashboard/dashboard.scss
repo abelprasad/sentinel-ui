@@ -157,3 +157,17 @@
   font-size: 11px;
   color: var(--text-dim);
 }
+
+.aircraft-marker {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text);
+  border: 1px solid rgba(255,255,255,0.4);
+
+  &.anomalous {
+    background: var(--high);
+    border-color: rgba(224,82,82,0.8);
+    box-shadow: 0 0 6px rgba(224,82,82,0.6);
+  }
+}
