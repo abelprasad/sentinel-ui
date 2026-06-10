@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../environments/environment';
 
 export interface AnomalyScore {
   id: number;
@@ -33,7 +34,7 @@ export interface PositionDTO {
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private base = 'http://localhost:8080';
+  private base = environment.apiUrl;
   private token = '';
 
   constructor(private http: HttpClient) {}
