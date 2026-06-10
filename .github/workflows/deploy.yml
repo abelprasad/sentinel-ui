@@ -1,0 +1,23 @@
+# sentinel-ui/.github/workflows/deploy.yml
+name: Build and Deploy SENTINEL UI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  trigger-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger sentinel backend workflow
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_PAT }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'abelprasad',
+              repo: 'sentinel',
+              workflow_id: 'deploy.yml',
+              ref: 'main'
+            })
