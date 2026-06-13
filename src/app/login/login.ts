@@ -33,9 +33,7 @@ export class Login implements AfterViewInit {
     this.buildGroup(posGroup,  1);
     this.buildGroup(negGroup, -1);
 
-    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      this.animatePaths();
-    }
+    this.animatePaths();
   }
 
   private buildGroup(group: HTMLElement, position: number) {
@@ -55,9 +53,9 @@ export class Login implements AfterViewInit {
 
       const path = document.createElementNS(SVG_NS, 'path');
       path.setAttribute('d', d);
-      path.setAttribute('stroke', 'currentColor');
+      path.setAttribute('stroke', '#F59E0B');
       path.setAttribute('stroke-width', String(0.5 + i * 0.03));
-      path.setAttribute('stroke-opacity', String(0.1 + i * 0.03));
+      path.setAttribute('stroke-opacity', String(Math.min(0.1 + i * 0.03, 1)));
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke-dasharray', '900');
       path.setAttribute('stroke-dashoffset', String(900 - (i / PATH_COUNT) * 900));

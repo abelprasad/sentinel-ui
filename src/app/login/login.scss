@@ -158,8 +158,3 @@
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.15; }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .status-dot { animation: none; }
-  .bg-paths   { display: none; }
-}
