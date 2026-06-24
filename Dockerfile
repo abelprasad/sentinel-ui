@@ -10,4 +10,5 @@ RUN npm run build -- --configuration production
 FROM nginx:alpine
 COPY --from=build /app/dist/sentinel-ui/browser /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY public/public.html /usr/share/nginx/html/public.html
 EXPOSE 80
