@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENTINEL — Pattern of Life Analyzer</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --bg: #f5f5f3;
+    --surface: #ffffff;
+    --surface-2: #f0efec;
+    --border: rgba(0,0,0,0.08);
+    --text: #111110;
+    --text-muted: #6b6b6b;
+    --accent: #e8712a;
+    --high: #c0392b;
+    --score-bg: rgba(232,113,42,0.12);
+    --score-fill: #e8712a;
+    --anomalous-border: #c0392b;
+    --anomalous-bg: rgba(192,57,43,0.04);
+  }
+  [data-theme="dark"] {
+    --bg: #080b0f;
+    --surface: #0d1117;
+    --surface-2: #111820;
+    --border: rgba(255,255,255,0.07);
+    --text: #cdd9e5;
+    --text-muted: #546172;
+    --accent: #e8712a;
+    --high: #e05252;
+    --score-bg: rgba(232,113,42,0.1);
+    --score-fill: #e8712a;
+    --anomalous-border: #e05252;
+    --anomalous-bg: rgba(224,82,82,0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    transition: background 0.2s, color 0.2s;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* NAV */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    height: 52px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+  }
+  .nav-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .nav-wordmark {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    color: var(--text);
+  }
+  .nav-tag {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .status-dot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #3db56e;
+  }
+  .dot.loading { background: var(--text-muted); }
+  .theme-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    transition: border-color 0.15s;
+  }
+  .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* HERO */
+  .hero {
+    padding: 3rem 2rem 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .hero-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .hero-title {
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+  .hero-sub {
+    font-size: 15px;
+    color: var(--text-muted);
+    max-width: 560px;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+  }
+
+  /* STATS */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 2.5rem;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+  }
+  .stat-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .stat-value {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-value.anomaly { color: var(--high); }
+
+  /* MAP */
+  .section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 2rem 2.5rem;
+  }
+  .section-header {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  #map {
+    height: 340px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #0d1117;
+  }
+
+  /* TRACK LIST */
+  .track-list {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .track-list-header {
+    display: grid;
+    grid-template-columns: 90px 80px 1fr 100px 80px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+  .track-list-header span {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .track-row {
+    display: grid;
+    grid-template-columns: 90px 80px 1fr 100px 80px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    transition: background 0.1s;
+  }
+  .track-row:last-child { border-bottom: none; }
+  .track-row:hover { background: var(--surface-2); }
+  .track-row.anomalous {
+    border-left: 2px solid var(--anomalous-border);
+    background: var(--anomalous-bg);
+    padding-left: 14px;
+  }
+  .track-callsign {
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    color: var(--text);
+  }
+  .track-class {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .track-explanation {
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 16px;
+  }
+  .score-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .score-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--score-bg);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .score-fill {
+    height: 100%;
+    background: var(--score-fill);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+  .score-fill.high { background: var(--high); }
+  .score-num {
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+    min-width: 28px;
+    text-align: right;
+  }
+  .anomaly-badge {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--high);
+    border: 1px solid var(--high);
+    padding: 2px 5px;
+    border-radius: 3px;
+    width: fit-content;
+  }
+  .track-empty {
+    padding: 32px 16px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* ARCH */
+  .arch-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .arch-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+  }
+  .arch-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .arch-value {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .arch-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+
+  /* STACK */
+  .stack-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 1rem;
+  }
+  .pill {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  footer .left {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  footer .links {
+    display: flex;
+    gap: 16px;
+  }
+  footer .links a {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  footer .links a:hover { color: var(--accent); text-decoration: none; }
+
+  /* LOADING */
+  .skeleton {
+    background: var(--surface-2);
+    border-radius: 4px;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-left">
+    <span class="nav-wordmark">[ SENTINEL ]</span>
+    <span class="nav-tag">PATTERN OF LIFE</span>
+  </div>
+  <div class="nav-right">
+    <div class="status-dot">
+      <span class="dot loading" id="status-dot"></span>
+      <span id="status-text">connecting...</span>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()">dark</button>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-eyebrow">LIVE · PHILADELPHIA AIRSPACE · 25NM RADIUS</div>
+  <h1 class="hero-title">Aircraft anomaly detection,<br>activity-based intelligence.</h1>
+  <p class="hero-sub">Real ADS-B data. Behavioral baselines per entity. Anomaly scoring across altitude, speed, heading, and position. Groq LLaMA generates plain-English summaries when a score exceeds threshold.</p>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Active Tracks</div>
+      <div class="stat-value" id="stat-tracks">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Anomalies / Hour</div>
+      <div class="stat-value anomaly" id="stat-anomalies">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Entities</div>
+      <div class="stat-value" id="stat-entities">—</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">Live Map</div>
+  <div id="map"></div>
+</div>
+
+<div class="section">
+  <div class="section-header">Recent Anomalies</div>
+  <div class="track-list">
+    <div class="track-list-header">
+      <span>Callsign</span>
+      <span>Class</span>
+      <span>Summary</span>
+      <span>Score</span>
+      <span>Flag</span>
+    </div>
+    <div id="track-body">
+      <div class="track-empty">Loading...</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-header">Architecture</div>
+  <div class="arch-grid">
+    <div class="arch-card">
+      <div class="arch-label">Ingestion</div>
+      <div class="arch-value">adsb.fi → Spring Boot</div>
+      <div class="arch-desc">30s poll, Philadelphia area, ICAO hex dedup</div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-label">Baseline Engine</div>
+      <div class="arch-value">Per-entity rolling avg</div>
+      <div class="arch-desc">Alt, speed, heading, lat, lon across N events</div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-label">Anomaly Scoring</div>
+      <div class="arch-value">Max deviation, threshold 0.7</div>
+      <div class="arch-desc">5-dimension score, dedup window 5 min</div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-label">LLM Layer</div>
+      <div class="arch-value">Groq · LLaMA 3.3 70B</div>
+      <div class="arch-desc">Async @Async, never blocks ingestion thread</div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-label">Auth</div>
+      <div class="arch-value">JWT + RBAC</div>
+      <div class="arch-desc">ANALYST / OPERATOR / ADMIN roles</div>
+    </div>
+    <div class="arch-card">
+      <div class="arch-label">Infrastructure</div>
+      <div class="arch-value">Docker · GitHub Actions</div>
+      <div class="arch-desc">Self-hosted on indra via Cloudflare Tunnel</div>
+    </div>
+  </div>
+
+  <div class="stack-pills">
+    <span class="pill">Java 21</span>
+    <span class="pill">Spring Boot 4</span>
+    <span class="pill">Spring Security</span>
+    <span class="pill">PostgreSQL 16</span>
+    <span class="pill">Angular 21</span>
+    <span class="pill">Leaflet</span>
+    <span class="pill">Groq API</span>
+    <span class="pill">Docker Compose</span>
+    <span class="pill">GitHub Actions</span>
+    <span class="pill">Cloudflare Tunnel</span>
+  </div>
+</div>
+
+<footer>
+  <div class="left">Built by <a href="https://abelprasad.dev">Abel Prasad</a> · Philadelphia, PA</div>
+  <div class="links">
+    <a href="https://github.com/abelprasad/sentinel" target="_blank">Backend</a>
+    <a href="https://github.com/abelprasad/sentinel-ui" target="_blank">Frontend</a>
+    <a href="https://sentinel.abelprasad.dev" target="_blank">Live Dashboard</a>
+  </div>
+</footer>
+
+<script>
+  const API = '/api/public/status';
+  let map, markers = {};
+
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    document.querySelector('.theme-toggle').textContent = isDark ? 'dark' : 'light';
+    if (map) {
+      map.eachLayer(l => { if (l._url) map.removeLayer(l); });
+      addTileLayer();
+    }
+  }
+
+  function addTileLayer() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const url = isDark
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    L.tileLayer(url, {
+      attribution: '© OpenStreetMap © CARTO',
+      subdomains: 'abcd',
+      maxZoom: 19
+    }).addTo(map);
+  }
+
+  function initMap() {
+    map = L.map('map', { zoomControl: true }).setView([40.05, -75.2], 9);
+    addTileLayer();
+  }
+
+  function planeIcon(heading, anomalous) {
+    const color = anomalous ? '#e05252' : '#e8712a';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+      <g transform="rotate(${heading}, 10, 10)">
+        <polygon points="10,1 13,14 10,12 7,14" fill="${color}" opacity="0.95"/>
+      </g>
+    </svg>`;
+    return L.divIcon({
+      html: svg,
+      className: '',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10]
+    });
+  }
+
+  function updateMap(positions) {
+    if (!positions || !positions.length) return;
+    const seen = new Set();
+    positions.forEach(p => {
+      if (!p.lat || !p.lon) return;
+      seen.add(p.entityId);
+      const icon = planeIcon(p.heading || 0, p.anomalous);
+      const tip = `<b>${p.callsign || p.icaoHex}</b><br>
+        Alt: ${p.altitude ? Math.round(p.altitude) + ' ft' : '—'}<br>
+        Speed: ${p.speed ? Math.round(p.speed) + ' kt' : '—'}<br>
+        ${p.anomalous ? '<span style="color:#e05252;font-weight:600">⚠ ANOMALOUS</span>' : ''}`;
+      if (markers[p.entityId]) {
+        markers[p.entityId].setLatLng([p.lat, p.lon]);
+        markers[p.entityId].setIcon(icon);
+        markers[p.entityId].bindTooltip(tip, { sticky: true });
+      } else {
+        markers[p.entityId] = L.marker([p.lat, p.lon], { icon })
+          .bindTooltip(tip, { sticky: true })
+          .addTo(map);
+      }
+    });
+    Object.keys(markers).forEach(id => {
+      if (!seen.has(parseInt(id))) {
+        map.removeLayer(markers[id]);
+        delete markers[id];
+      }
+    });
+  }
+
+  function renderTracks(anomalies) {
+    const body = document.getElementById('track-body');
+    if (!anomalies || !anomalies.length) {
+      body.innerHTML = '<div class="track-empty">No anomalies in the last hour.</div>';
+      return;
+    }
+    body.innerHTML = anomalies.map(a => {
+      const score = a.score || 0;
+      const pct = Math.round(score * 100);
+      const isHigh = score >= 0.85;
+      const explanation = a.explanation || 'Analyzing...';
+      return `<div class="track-row anomalous">
+        <div class="track-callsign">${a.callsign || a.icaoHex}</div>
+        <div class="track-class">${a.classification || 'UNKNOWN'}</div>
+        <div class="track-explanation" title="${explanation}">${explanation}</div>
+        <div class="score-bar-wrap">
+          <div class="score-bar">
+            <div class="score-fill ${isHigh ? 'high' : ''}" style="width:${pct}%"></div>
+          </div>
+          <span class="score-num">${score.toFixed(2)}</span>
+        </div>
+        <div><span class="anomaly-badge">ANOMALY</span></div>
+      </div>`;
+    }).join('');
+  }
+
+  function setStatus(live) {
+    const dot = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    dot.className = 'dot' + (live ? '' : ' loading');
+    text.textContent = live ? 'live' : 'connecting...';
+  }
+
+  async function fetchData() {
+    try {
+      const res = await fetch(API);
+      if (!res.ok) throw new Error('non-200');
+      const data = await res.json();
+      document.getElementById('stat-tracks').textContent = data.activeTracksNow ?? '—';
+      document.getElementById('stat-anomalies').textContent = data.anomaliesLastHour ?? '—';
+      document.getElementById('stat-entities').textContent = data.totalEntities ?? '—';
+      renderTracks(data.recentAnomalies);
+      updateMap(data.positions);
+      setStatus(true);
+    } catch (e) {
+      setStatus(false);
+    }
+  }
+
+  initMap();
+  fetchData();
+  setInterval(fetchData, 30000);
+</script>
+</body>
+</html>

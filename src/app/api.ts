@@ -1,19 +1,27 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../environments/environment';
 
-export interface PublicAnomaly {
+export interface AnomalyScore {
   id: number;
-  callsign: string;
-  icaoHex: string;
-  classification: string;
   score: number;
   explanation: string;
   flaggedAt: string;
+  entity: { id: number; callsign: string; icaoHex: string };
+  event: { lat: number; lon: number; altitude: number; speed: number; heading: number };
 }
 
-export interface PublicPosition {
+export interface AircraftEntity {
+  id: number;
+  callsign: string;
+  icaoHex: string;
+  type: string;
+  metadata: string;
+  classification: string;
+}
+
+export interface PositionDTO {
   entityId: number;
   callsign: string;
   icaoHex: string;
@@ -23,50 +31,50 @@ export interface PublicPosition {
   speed: number;
   heading: number;
   anomalous: boolean;
-  score: number;
-  classification: string;
-}
-
-export interface PublicStatus {
-  activeTracksNow: number;
-  anomaliesLastHour: number;
-  totalEntities: number;
-  recentAnomalies: PublicAnomaly[];
-  positions: PublicPosition[];
-}
-
-export interface TrackPoint {
-  timestamp: string;
-  lat: number;
-  lon: number;
-  altitude: number;
-  speed: number;
-  heading: number;
-}
-
-export interface IncidentTrack {
-  anomalyId: number;
-  callsign: string;
-  icaoHex: string;
-  score: number;
-  explanation: string;
-  flaggedAt: string;
-  triggerLat: number;
-  triggerLon: number;
-  points: TrackPoint[];
 }
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private base = environment.apiUrl;
+  private token = '';
 
   constructor(private http: HttpClient) {}
 
-  getPublicStatus(): Observable<PublicStatus> {
-    return this.http.get<PublicStatus>(`${this.base}/public/status`);
+  setToken(token: string) {
+    this.token = token;
   }
 
-  getIncidentTrack(anomalyId: number): Observable<IncidentTrack> {
-    return this.http.get<IncidentTrack>(`${this.base}/public/track/${anomalyId}`);
+  private headers(): HttpHeaders {
+    return new HttpHeaders({ Authorization: `Bearer ${this.token}` });
+  }
+
+  login(username: string, password: string): Observable<{ token: string }> {
+    return this.http.post<{ token: string }>(`${this.base}/auth/login`, { username, password });
+  }
+
+  getAnomalies(): Observable<AnomalyScore[]> {
+    return this.http.get<AnomalyScore[]>(`${this.base}/anomalies`, { headers: this.headers() });
+  }
+
+  getEntities(): Observable<AircraftEntity[]> {
+    return this.http.get<AircraftEntity[]>(`${this.base}/entities`, { headers: this.headers() });
+  }
+
+  getPositions(): Observable<PositionDTO[]> {
+    return this.http.get<PositionDTO[]>(`${this.base}/positions`, { headers: this.headers() });
+  }
+
+  getEntityAnomalies(entityId: number): Observable<AnomalyScore[]> {
+    return this.http.get<AnomalyScore[]>(`${this.base}/entities/${entityId}/anomalies`, { headers: this.headers() });
+  }
+
+  simulateQuick(): Observable<AnomalyScore> {
+    return this.http.post<AnomalyScore>(`${this.base}/simulate/quick`, {}, { headers: this.headers() });
+  }
+
+  simulateCustom(entityId: number, altitude: number, speed: number, heading: number): Observable<AnomalyScore> {
+    return this.http.post<AnomalyScore>(`${this.base}/simulate/custom`, {
+      entityId, altitude, speed, heading
+    }, { headers: this.headers() });
   }
 }

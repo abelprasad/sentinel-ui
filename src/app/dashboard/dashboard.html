@@ -1,109 +1,150 @@
 <div class="dashboard">
   <header class="topbar">
     <span class="wordmark">SENTINEL</span>
-    <span class="tagline">AI airspace anomaly detection</span>
+    <div class="topbar-center">
+      <div class="countdown-wrap">
+        <div class="countdown-bar" [style.width.%]="(countdown / 30) * 100"></div>
+      </div>
+      <span class="countdown-label">{{ countdown }}s</span>
+    </div>
     <div class="topbar-right">
-      <div class="stat" *ngIf="status">Tracks <span>{{ status.activeTracksNow }}</span></div>
-      <div class="stat" *ngIf="status">Anomalies/hr <span>{{ status.anomaliesLastHour }}</span></div>
-      <div class="stat" *ngIf="status">Aircraft DB <span>{{ status.totalEntities }}</span></div>
-      <button class="how-btn" (click)="showHowItWorks = true">How it works</button>
-      <div class="live-indicator" [class.live]="state === 'ready'"></div>
+      <div class="stat">Entries <span>{{ entities.length }}</span></div>
+      <div class="stat">Anomalies <span>{{ anomalies.length }}</span></div>
+      <button class="sim-toggle" (click)="toggleSimPanel()" [class.active]="simPanelOpen">[ SIM ]</button>
+      <div class="live-indicator"></div>
     </div>
   </header>
 
-  <div class="main">
-    <div id="map"></div>
-
-    <!-- Replay overlay -->
-    <div class="replay-bar" *ngIf="replayTrack">
-      <div class="replay-info">
-        <span class="replay-callsign">{{ replayTrack.callsign }}</span>
-        <span class="replay-expl">{{ replayTrack.explanation }}</span>
-      </div>
-      <div class="replay-controls">
-        <button (click)="toggleReplay()">{{ replayPlaying ? 'Pause' : 'Play' }}</button>
-        <input type="range" min="0" [max]="replayTrack.points.length - 1"
-               [value]="replayIndex" (input)="seekReplay($event.target.valueAsNumber)" />
-        <span class="replay-time">{{ replayIndex + 1 }} / {{ replayTrack.points.length }}</span>
-        <button class="exit" (click)="exitReplay()">Exit replay</button>
-      </div>
+  <!-- Simulation panel -->
+  <div class="sim-panel" *ngIf="simPanelOpen">
+    <div class="sim-panel-header">
+      <span class="sim-title">Simulation Mode</span>
+      <button class="sim-close" (click)="toggleSimPanel()">✕</button>
     </div>
 
-    <aside class="panel">
-      <div class="section-header">
-        Anomaly feed
-        <span class="count" *ngIf="status">{{ status.recentAnomalies.length }}</span>
+    <div class="sim-section">
+      <div class="sim-section-label">Quick Fire</div>
+      <p class="sim-desc">Picks a random active entity, injects a guaranteed score-1.0 anomaly.</p>
+      <button class="sim-btn-primary" (click)="quickFire()" [disabled]="simLoading">
+        {{ simLoading ? 'Injecting...' : 'Inject Anomaly' }}
+      </button>
+    </div>
+
+    <div class="sim-divider"></div>
+
+    <div class="sim-section">
+      <div class="sim-section-label">Custom Injection</div>
+
+      <div class="sim-field">
+        <label>Entity</label>
+        <select [(ngModel)]="simEntityId">
+          <option [value]="null" disabled>Select aircraft</option>
+          <option *ngFor="let e of entities" [value]="e.id">
+            {{ e.callsign || e.icaoHex }}
+          </option>
+        </select>
       </div>
 
-      <div *ngIf="state === 'loading'" class="empty-state">
-        <div class="spinner"></div>
-        Connecting to Sentinel backend...
+      <div class="sim-field">
+        <label>Altitude &nbsp;<span class="sim-val">{{ simAltitude | number:'1.0-0' }} ft</span></label>
+        <input type="range" min="0" max="50000" step="500" [(ngModel)]="simAltitude" />
       </div>
 
-      <div *ngIf="state === 'error'" class="empty-state error">
-        {{ errorMsg }}
-        <button (click)="retry()">Retry</button>
+      <div class="sim-field">
+        <label>Speed &nbsp;<span class="sim-val">{{ simSpeed | number:'1.0-0' }} kts</span></label>
+        <input type="range" min="0" max="600" step="10" [(ngModel)]="simSpeed" />
       </div>
 
-      <div *ngIf="state === 'ready' && status && status.recentAnomalies.length === 0" class="empty-state">
-        No anomalies detected in the recent window. Airspace nominal.
+      <div class="sim-field">
+        <label>Heading &nbsp;<span class="sim-val">{{ simHeading | number:'1.0-0' }}°</span></label>
+        <input type="range" min="0" max="360" step="5" [(ngModel)]="simHeading" />
       </div>
 
-      <div *ngFor="let a of status?.recentAnomalies" class="anomaly-card" [ngClass]="severityClass(a.score)">
-        <div class="card-top">
-          <span class="callsign">{{ a.callsign }}</span>
-          <span class="score-inline" [ngClass]="severityClass(a.score)">{{ (a.score * 100).toFixed(0) }}%</span>
-        </div>
-        <div class="ai-label">AI assessment</div>
-        <div class="explanation">{{ a.explanation }}</div>
-        <div class="card-meta">
-          <span>{{ a.classification }}</span>
-          <span>{{ formatTime(a.flaggedAt) }}</span>
-        </div>
-        <button class="replay-btn" (click)="startReplay(a)" [disabled]="replayLoading">
-          {{ replayLoading ? 'Loading...' : 'Replay incident' }}
-        </button>
-      </div>
-    </aside>
+      <button class="sim-btn-secondary" (click)="injectCustom()" [disabled]="simLoading || !simEntityId">
+        {{ simLoading ? 'Injecting...' : 'Inject Custom' }}
+      </button>
+    </div>
+
+    <div class="sim-result" *ngIf="simResult">{{ simResult }}</div>
   </div>
 
-  <!-- How it works modal -->
-  <div class="modal-backdrop" *ngIf="showHowItWorks" (click)="showHowItWorks = false">
-    <div class="modal" (click)="$event.stopPropagation()">
-      <button class="modal-close" (click)="showHowItWorks = false">Close</button>
-      <h2>How Sentinel works</h2>
-      <div class="pipeline">
-        <div class="pipe-step">
-          <div class="pipe-icon">1</div>
-          <div class="pipe-title">ADS-B ingestion</div>
-          <div class="pipe-desc">Live aircraft telemetry (position, altitude, speed, heading) streamed from public ADS-B receivers.</div>
+  <div class="main">
+
+    <!-- Detail panel (left) -->
+    <aside class="detail-panel" *ngIf="selectedEntity">
+      <div class="detail-header">
+        <div class="detail-callsign">{{ selectedEntity.callsign || selectedEntity.icaoHex }}</div>
+        <button class="close-btn" (click)="closeDetail()">✕</button>
+      </div>
+      <div class="detail-meta">
+        <div class="detail-row">
+          <span class="detail-label">ICAO</span>
+          <span class="detail-value">{{ selectedEntity.icaoHex }}</span>
         </div>
-        <div class="pipe-arrow">&rarr;</div>
-        <div class="pipe-step">
-          <div class="pipe-icon">2</div>
-          <div class="pipe-title">Behavioral baselines</div>
-          <div class="pipe-desc">Per-aircraft profiles learn normal altitude, speed, and heading envelopes over time.</div>
+        <div class="detail-row">
+          <span class="detail-label">ALT</span>
+          <span class="detail-value">{{ selectedEntity.altitude.toLocaleString() ?? '--' }} ft</span>
         </div>
-        <div class="pipe-arrow">&rarr;</div>
-        <div class="pipe-step">
-          <div class="pipe-icon">3</div>
-          <div class="pipe-title">Anomaly scoring</div>
-          <div class="pipe-desc">Each new position is scored against its baseline. Deviations surface as scored incidents.</div>
+        <div class="detail-row">
+          <span class="detail-label">SPD</span>
+          <span class="detail-value">{{ selectedEntity.speed.toFixed(0) ?? '--' }} kts</span>
         </div>
-        <div class="pipe-arrow">&rarr;</div>
-        <div class="pipe-step">
-          <div class="pipe-icon">4</div>
-          <div class="pipe-title">AI explanation</div>
-          <div class="pipe-desc">An LLM turns raw deviations into a plain-English assessment of what went off-profile.</div>
+        <div class="detail-row">
+          <span class="detail-label">HDG</span>
+          <span class="detail-value">{{ selectedEntity.heading.toFixed(0) ?? '--' }}°</span>
         </div>
-        <div class="pipe-arrow">&rarr;</div>
-        <div class="pipe-step">
-          <div class="pipe-icon">5</div>
-          <div class="pipe-title">Live dashboard</div>
-          <div class="pipe-desc">Tracks, scores, and explanations stream here. Replay any incident on the map.</div>
+        <div class="detail-row">
+          <span class="detail-label">STATUS</span>
+          <span class="detail-value" [class.anomalous-badge]="selectedEntity.anomalous">
+            {{ selectedEntity.anomalous ? 'ANOMALOUS' : 'NORMAL' }}
+          </span>
         </div>
       </div>
-      <p class="stack-note">Spring Boot &middot; Postgres &middot; Angular &middot; Leaflet &middot; Groq LLM &middot; Docker</p>
-    </div>
+
+      <div class="detail-section-label">Recent Anomalies</div>
+
+      <div *ngIf="detailLoading" class="empty-state">Loading...</div>
+      <div *ngIf="!detailLoading && selectedAnomalies.length === 0" class="empty-state">No anomalies on record</div>
+
+      <div *ngFor="let a of selectedAnomalies" class="anomaly-card" [ngClass]="severityClass(a.score)">
+        <div class="card-top">
+          <span class="score-inline" [ngClass]="severityClass(a.score)">{{ (a.score * 100).toFixed(0) }}%</span>
+          <span class="card-time">{{ a.flaggedAt | date:'HH:mm:ss' }}</span>
+        </div>
+        <div class="explanation">{{ a.explanation }}</div>
+        <div class="card-meta">
+          <span>{{ a.event.altitude | number:'1.0-0' }} ft</span>
+          <span>{{ a.event.speed | number:'1.0-0' }} kts</span>
+          <span>{{ a.event.heading | number:'1.0-0' }}°</span>
+        </div>
+      </div>
+    </aside>
+
+    <div id="map"></div>
+
+    <!-- Anomaly feed (right) -->
+    <aside class="panel">
+      <div class="section-header">
+        <span>Anomaly feed</span>
+        <span class="count">{{ visibleAnomalyCount }} / latest 100</span>
+      </div>
+
+      <div *ngIf="loading" class="empty-state">Connecting...</div>
+      <div *ngIf="!loading && anomalies.length === 0" class="empty-state">No anomalies detected</div>
+
+      <div *ngFor="let a of anomalies" class="anomaly-card" [ngClass]="severityClass(a.score)">
+        <div class="card-top">
+          <span class="callsign">{{ a.entity.callsign }}</span>
+          <span class="score-inline" [ngClass]="severityClass(a.score)">{{ (a.score * 100).toFixed(0) }}%</span>
+        </div>
+        <div class="explanation">{{ a.explanation }}</div>
+        <div class="card-meta">
+          <span>{{ a.event.altitude | number:'1.0-0' }} ft</span>
+          <span>{{ a.event.speed | number:'1.0-0' }} kts</span>
+          <span>{{ a.event.heading | number:'1.0-0' }}°</span>
+          <span>{{ a.flaggedAt | date:'HH:mm:ss' }}</span>
+        </div>
+      </div>
+    </aside>
   </div>
 </div>
