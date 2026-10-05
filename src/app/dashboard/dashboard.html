@@ -1,38 +1,109 @@
 <div class="dashboard">
   <header class="topbar">
-    <span class="wordmark" style="color: var(--accent)">Sentinel</span>
+    <span class="wordmark">SENTINEL</span>
+    <span class="tagline">AI airspace anomaly detection</span>
     <div class="topbar-right">
-      <div class="stat">Entities <span>{{ entities.length }}</span></div>
-      <div class="stat">Anomalies <span>{{ anomalies.length }}</span></div>
-      <div class="live-indicator"></div>
+      <div class="stat" *ngIf="status">Tracks <span>{{ status.activeTracksNow }}</span></div>
+      <div class="stat" *ngIf="status">Anomalies/hr <span>{{ status.anomaliesLastHour }}</span></div>
+      <div class="stat" *ngIf="status">Aircraft DB <span>{{ status.totalEntities }}</span></div>
+      <button class="how-btn" (click)="showHowItWorks = true">How it works</button>
+      <div class="live-indicator" [class.live]="state === 'ready'"></div>
     </div>
   </header>
 
   <div class="main">
-    <div #mapContainer id="map"></div>
+    <div id="map"></div>
+
+    <!-- Replay overlay -->
+    <div class="replay-bar" *ngIf="replayTrack">
+      <div class="replay-info">
+        <span class="replay-callsign">{{ replayTrack.callsign }}</span>
+        <span class="replay-expl">{{ replayTrack.explanation }}</span>
+      </div>
+      <div class="replay-controls">
+        <button (click)="toggleReplay()">{{ replayPlaying ? 'Pause' : 'Play' }}</button>
+        <input type="range" min="0" [max]="replayTrack.points.length - 1"
+               [value]="replayIndex" (input)="seekReplay($event.target.valueAsNumber)" />
+        <span class="replay-time">{{ replayIndex + 1 }} / {{ replayTrack.points.length }}</span>
+        <button class="exit" (click)="exitReplay()">Exit replay</button>
+      </div>
+    </div>
 
     <aside class="panel">
       <div class="section-header">
         Anomaly feed
-        <span class="count">{{ anomalies.length }}</span>
+        <span class="count" *ngIf="status">{{ status.recentAnomalies.length }}</span>
       </div>
 
-      <div *ngIf="loading" class="empty-state">Connecting...</div>
-      <div *ngIf="!loading && anomalies.length === 0" class="empty-state">No anomalies detected</div>
+      <div *ngIf="state === 'loading'" class="empty-state">
+        <div class="spinner"></div>
+        Connecting to Sentinel backend...
+      </div>
 
-      <div *ngFor="let a of anomalies" class="anomaly-card" [class]="severityClass(a.score)">
+      <div *ngIf="state === 'error'" class="empty-state error">
+        {{ errorMsg }}
+        <button (click)="retry()">Retry</button>
+      </div>
+
+      <div *ngIf="state === 'ready' && status && status.recentAnomalies.length === 0" class="empty-state">
+        No anomalies detected in the recent window. Airspace nominal.
+      </div>
+
+      <div *ngFor="let a of status?.recentAnomalies" class="anomaly-card" [ngClass]="severityClass(a.score)">
         <div class="card-top">
-          <span class="callsign">{{ a.entity.callsign }}</span>
-          <span class="score-inline" [class]="severityClass(a.score)">{{ (a.score * 100).toFixed(0) }}%</span>
+          <span class="callsign">{{ a.callsign }}</span>
+          <span class="score-inline" [ngClass]="severityClass(a.score)">{{ (a.score * 100).toFixed(0) }}%</span>
         </div>
+        <div class="ai-label">AI assessment</div>
         <div class="explanation">{{ a.explanation }}</div>
         <div class="card-meta">
-          <span>{{ a.event.altitude | number:'1.0-0' }} ft</span>
-          <span>{{ a.event.speed | number:'1.0-0' }} kts</span>
-          <span>{{ a.event.heading | number:'1.0-0' }}°</span>
-          <span>{{ a.flaggedAt | date:'HH:mm:ss' }}</span>
+          <span>{{ a.classification }}</span>
+          <span>{{ formatTime(a.flaggedAt) }}</span>
         </div>
+        <button class="replay-btn" (click)="startReplay(a)" [disabled]="replayLoading">
+          {{ replayLoading ? 'Loading...' : 'Replay incident' }}
+        </button>
       </div>
     </aside>
+  </div>
+
+  <!-- How it works modal -->
+  <div class="modal-backdrop" *ngIf="showHowItWorks" (click)="showHowItWorks = false">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <button class="modal-close" (click)="showHowItWorks = false">Close</button>
+      <h2>How Sentinel works</h2>
+      <div class="pipeline">
+        <div class="pipe-step">
+          <div class="pipe-icon">1</div>
+          <div class="pipe-title">ADS-B ingestion</div>
+          <div class="pipe-desc">Live aircraft telemetry (position, altitude, speed, heading) streamed from public ADS-B receivers.</div>
+        </div>
+        <div class="pipe-arrow">&rarr;</div>
+        <div class="pipe-step">
+          <div class="pipe-icon">2</div>
+          <div class="pipe-title">Behavioral baselines</div>
+          <div class="pipe-desc">Per-aircraft profiles learn normal altitude, speed, and heading envelopes over time.</div>
+        </div>
+        <div class="pipe-arrow">&rarr;</div>
+        <div class="pipe-step">
+          <div class="pipe-icon">3</div>
+          <div class="pipe-title">Anomaly scoring</div>
+          <div class="pipe-desc">Each new position is scored against its baseline. Deviations surface as scored incidents.</div>
+        </div>
+        <div class="pipe-arrow">&rarr;</div>
+        <div class="pipe-step">
+          <div class="pipe-icon">4</div>
+          <div class="pipe-title">AI explanation</div>
+          <div class="pipe-desc">An LLM turns raw deviations into a plain-English assessment of what went off-profile.</div>
+        </div>
+        <div class="pipe-arrow">&rarr;</div>
+        <div class="pipe-step">
+          <div class="pipe-icon">5</div>
+          <div class="pipe-title">Live dashboard</div>
+          <div class="pipe-desc">Tracks, scores, and explanations stream here. Replay any incident on the map.</div>
+        </div>
+      </div>
+      <p class="stack-note">Spring Boot &middot; Postgres &middot; Angular &middot; Leaflet &middot; Groq LLM &middot; Docker</p>
+    </div>
   </div>
 </div>
